@@ -1,0 +1,24 @@
+﻿<Window x:Class="DesignHelper.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="MainWindow" Height="120" Width="240" AllowsTransparency="True" WindowStyle="None" Background="{x:Null}" MouseDown="Window_MouseDown" MouseUp="Window_MouseUp" MouseMove="Window_MouseMove"
+        KeyDown="Window_KeyDown" KeyUp="Window_KeyUp" AllowDrop="True">
+    <Window.CommandBindings>
+        <CommandBinding Command="Paste" Executed="CommandBinding_PasteExecuted"/>
+    </Window.CommandBindings>
+    <StackPanel MouseWheel="StackPanel_MouseWheel"  >
+        <ToolBar Name="toolbar">
+            <ToolBar.Background>
+                <LinearGradientBrush EndPoint="0,1" StartPoint="0,0">
+                    <GradientStop Color="#FFDDEDF5" Offset="0"/>
+                    <GradientStop Color="#FF9BC8FF" Offset="1"/>
+                </LinearGradientBrush>
+            </ToolBar.Background>
+            <Button Content="Open" Click="Open_Button_Click" />
+            <Button Content="Close" Click="Close_Button_Click" />
+        </ToolBar>
+        <Image Name="image"  Margin="0" Source="s.jpg" Stretch="None" Cursor="Hand" Opacity="0.5"/>
+        <CheckBox Content="CheckBox"/>
+
+    </StackPanel>
+</Window>
