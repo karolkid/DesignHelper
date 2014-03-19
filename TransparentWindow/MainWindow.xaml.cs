@@ -70,7 +70,7 @@ namespace DesignHelper
             this.image.Stretch = Stretch.UniformToFill;
 
             this.Width = myBitmapImage.PixelWidth;
-            this.Height = myBitmapImage.PixelHeight + this.toolbar.ActualHeight;
+            this.Height = myBitmapImage.PixelHeight;// +this.toolbar.ActualHeight;
         }
         private void Close_Button_Click(object sender, RoutedEventArgs e)
         {
@@ -262,6 +262,43 @@ namespace DesignHelper
             {
                 this.OpenImage(Clipboard.GetImage());
             }
+        }
+
+        private void image_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+        {
+            //获取像素
+            //定义切割矩形
+            var cut = new Int32Rect((int)e.CursorLeft,(int)e.CursorTop, 1,1);
+            //计算Stride
+            var bitmap = this.image.Source as BitmapSource;
+            var stride = bitmap.Format.BitsPerPixel * cut.Width / 8;
+            //声明字节数组
+            byte[] data = new byte[cut.Height * stride];
+            //调用CopyPixels
+            bitmap.CopyPixels(cut, data, stride, 0);
+
+            //Debug.WriteLine(string.Format("{0},{1},{2},{3}", data[0], data[1], data[2], data[3]));
+
+            this.mnuItemColor.Items.Clear();
+
+            string color16 = "#", color10 = "";
+            for (int i = 3; i >=0; i--)
+            {
+                int c = (int)data[i];
+                color16+= Convert.ToString(c,16).ToUpper();
+                if(color10.Length>0){
+                    color10+=",";
+                }
+                color10 += c.ToString();
+            }
+            this.mnuItemColor10.Header = color10;
+            this.mnuItemColor16.Header = color16;
+        }
+
+        private void mnuItemColor_Click(object sender, RoutedEventArgs e)
+        {
+            MenuItem item = (MenuItem)sender;
+            Clipboard.SetText(item.Header.ToString());
         }
     
     }
