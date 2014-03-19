@@ -2,10 +2,10 @@
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="MainWindow" Height="360" Width="640" AllowsTransparency="True" WindowStyle="None" Background="{x:Null}" MouseDown="Window_MouseDown" MouseUp="Window_MouseUp" MouseMove="Window_MouseMove"
-        KeyDown="Window_KeyDown" KeyUp="Window_KeyUp" AllowDrop="True" Icon="application.ico">
+        KeyDown="Window_KeyDown" KeyUp="Window_KeyUp" AllowDrop="True" Icon="application.ico" Loaded="Window_Loaded">
     <Window.CommandBindings>
         <CommandBinding Command="Paste" Executed="CommandBinding_PasteExecuted"/>
-        <CommandBinding Command="ApplicationCommands.Undo" Executed="CommandBinding_UndoExecuted"/>
+        <!--<CommandBinding Command="ApplicationCommands.Undo" Executed="CommandBinding_UndoExecuted"/>-->
     </Window.CommandBindings>
     <StackPanel MouseWheel="StackPanel_MouseWheel"  >
         <!--
@@ -31,7 +31,7 @@
             </Image.ContextMenu>
         </Image>
         <TextBlock x:Name="LockTip" Height="24" Margin="0,-24,0,0" RenderTransformOrigin="0.5,0.5" FontSize="16" Visibility="Hidden" Foreground="Red">
-            Ctrl+Z to unlock</TextBlock>
+            Ctrl+Atl+U to unlock</TextBlock>
 
     </StackPanel>
 </Window>

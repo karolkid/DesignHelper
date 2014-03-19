@@ -22,6 +22,7 @@ using System.Windows.Shapes;
 using ComIDataObject = System.Runtime.InteropServices.ComTypes.IDataObject;
 using DataObject = System.Windows.DataObject;
 
+
 namespace DesignHelper
 {
     /// <summary>
@@ -35,6 +36,16 @@ namespace DesignHelper
             this.SourceInitialized += new EventHandler(MainWindow_SourceInitialized);
 
         }
+        private void Window_Loaded(object sender, RoutedEventArgs e)
+        {
+            ThunderStarter.HotKey Ctrl_Atl_U = new ThunderStarter.HotKey(this,
+                ThunderStarter.HotKey.KeyFlags.MOD_ALT | ThunderStarter.HotKey.KeyFlags.MOD_CONTROL,
+                 System.Windows.Forms.Keys.U);
+            Ctrl_Atl_U.OnHotKey += Ctrl_Atl_U_OnHotKey;
+
+        }
+
+
 
         private void Open_Button_Click(object sender, RoutedEventArgs e)
         {
@@ -386,10 +397,17 @@ namespace DesignHelper
             }
         }
 
-
+        void Ctrl_Atl_U_OnHotKey()
+        {
+            if (this.Lock)
+            {
+                DoLock();
+            }
+        }
 
         #endregion
         
         public bool Lock { get; set; }
+
     }
 }
