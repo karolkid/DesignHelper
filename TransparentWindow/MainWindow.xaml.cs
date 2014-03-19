@@ -6,6 +6,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows;
@@ -31,6 +32,8 @@ namespace DesignHelper
         public MainWindow()
         {
             InitializeComponent();
+            this.SourceInitialized += new EventHandler(MainWindow_SourceInitialized);
+
         }
 
         private void Open_Button_Click(object sender, RoutedEventArgs e)
@@ -72,14 +75,38 @@ namespace DesignHelper
             this.Width = myBitmapImage.PixelWidth;
             this.Height = myBitmapImage.PixelHeight;// +this.toolbar.ActualHeight;
         }
+
+        private void SetImageFromUri(Uri uri)
+        {
+            string fileName = System.IO.Path.GetTempFileName();
+            using (WebClient webClient = new WebClient())
+            {
+                webClient.DownloadFileCompleted += delegate
+                {
+                    this.OpenImage(fileName);
+                };
+                webClient.DownloadFileAsync(uri, fileName);
+            }
+            
+        }
+        private void CommandBinding_PasteExecuted(object sender, ExecutedRoutedEventArgs e)
+        {
+            //MessageBox.Show("Clipboard operation occured!");
+            if (Clipboard.ContainsImage())
+            {
+                this.OpenImage(Clipboard.GetImage());
+            }
+        }
+
         private void Close_Button_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
         }
 
-#region Move Window
-		        bool moving = false;
+        #region Move Window
+		bool moving = false;
         double x1, y1;
+        double movement = 10;
         private void Window_MouseDown(object sender, MouseButtonEventArgs e)
         {
             if (e.LeftButton == MouseButtonState.Pressed)
@@ -101,7 +128,7 @@ namespace DesignHelper
 
         private void Window_MouseMove(object sender, MouseEventArgs e)
         {
-            if (this.moving)
+            if (this.moving && !this.Lock)
             {
                 Point pos = e.GetPosition(this);
                 this.Left += pos.X - this.x1;
@@ -109,8 +136,46 @@ namespace DesignHelper
 
             }
         }
+        private void Window_KeyDown(object sender, KeyEventArgs e)
+        {
+            double movement = this.Lock ? 0 : this.movement;
+            switch (e.Key)
+            {
+                case Key.Left:
+                    this.Left -= movement;
+                    break;
+                case Key.Right:
+                    this.Left += movement;
+                    break;
+                case Key.Up:
+                    this.Top -= movement;
+                    break;
+                case Key.Down:
+                    this.Top += movement;
+                    break;
+                case Key.LeftCtrl:
+                case Key.RightCtrl:
+                    this.movement = 1;
+                    break;
+                default:
+                    break;
+            }
+            Debug.WriteLine(e.Key);
+        }
+
+        private void Window_KeyUp(object sender, KeyEventArgs e)
+        {
+            switch (e.Key)
+            {
+                case Key.LeftCtrl:
+                case Key.RightCtrl:
+                    this.movement = 10;
+                    break;
+            }
+        }
 
 	#endregion    
+        #region Mouse Wheel KeyPress Drag&Drop
 
         private void StackPanel_MouseWheel(object sender, MouseWheelEventArgs e)
         {
@@ -128,43 +193,6 @@ namespace DesignHelper
             this.image.Opacity = o;
         }
 
-        double movement = 10;
-        private void Window_KeyDown(object sender, KeyEventArgs e)
-        {
-            switch (e.Key)
-            {
-                case Key.Left:
-                    this.Left -= movement;
-                    break;
-                case Key.Right:
-                    this.Left += movement;
-                    break;
-                case Key.Up:
-                    this.Top -= movement;
-                    break;
-                case Key.Down:
-                    this.Top += movement;
-                    break;
-                case Key.LeftCtrl:
-                case Key.RightCtrl:
-                    movement = 1;
-                    break;
-                default:
-                    break;
-            }
-            Debug.WriteLine(e.Key);
-        }
-
-        private void Window_KeyUp(object sender, KeyEventArgs e)
-        {
-            switch (e.Key)
-            {
-                case  Key.LeftCtrl:
-                case Key.RightCtrl:
-                    movement = 10;
-                    break;
-            }
-        }
         protected override void OnDragEnter(DragEventArgs e)
         {
             Win32Point wp;
@@ -205,7 +233,7 @@ namespace DesignHelper
             dropHelper.Drop((ComIDataObject)e.Data, ref wp, (int)e.Effects);
             if (e.Data.GetDataPresent(DataFormats.FileDrop))
             {
-                string[] files  = e.Data.GetData(DataFormats.FileDrop) as string[];
+                string[] files = e.Data.GetData(DataFormats.FileDrop) as string[];
                 this.OpenImage(files[0]);
             }
 
@@ -241,34 +269,16 @@ namespace DesignHelper
                     SetImageFromUri(uri);
                 }
             }
-        }
-        private void SetImageFromUri(Uri uri)
-        {
-            string fileName = System.IO.Path.GetTempFileName();
-            using (WebClient webClient = new WebClient())
-            {
-                webClient.DownloadFileCompleted += delegate
-                {
-                    this.OpenImage(fileName);
-                };
-                webClient.DownloadFileAsync(uri, fileName);
-            }
-            
-        }
-        private void CommandBinding_PasteExecuted(object sender, ExecutedRoutedEventArgs e)
-        {
-            //MessageBox.Show("Clipboard operation occured!");
-            if (Clipboard.ContainsImage())
-            {
-                this.OpenImage(Clipboard.GetImage());
-            }
-        }
+        } 
+        #endregion
+
+        #region Get Color & ContextMenu
 
         private void image_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
             //获取像素
             //定义切割矩形
-            var cut = new Int32Rect((int)e.CursorLeft,(int)e.CursorTop, 1,1);
+            var cut = new Int32Rect((int)e.CursorLeft, (int)e.CursorTop, 1, 1);
             //计算Stride
             var bitmap = this.image.Source as BitmapSource;
             var stride = bitmap.Format.BitsPerPixel * cut.Width / 8;
@@ -282,24 +292,104 @@ namespace DesignHelper
             this.mnuItemColor.Items.Clear();
 
             string color16 = "#", color10 = "";
-            for (int i = 3; i >=0; i--)
+            for (int i = 3; i >= 0; i--)
             {
                 int c = (int)data[i];
-                color16+= Convert.ToString(c,16).ToUpper();
-                if(color10.Length>0){
-                    color10+=",";
+                color16 += Convert.ToString(c, 16).ToUpper();
+                if (color10.Length > 0)
+                {
+                    color10 += ",";
                 }
                 color10 += c.ToString();
             }
             this.mnuItemColor10.Header = color10;
             this.mnuItemColor16.Header = color16;
+
+            //设置图标
+            int iconW = 16, iconH =16;
+            int iconStride = bitmap.Format.BitsPerPixel * iconW / 8;
+            byte[] iconData = new byte[iconH * iconStride];
+            for (int i = 0; i < iconData.Length; i++)
+            {
+                iconData[i] = data[i % 4];
+            }
+            BitmapSource icon = BitmapSource.Create(iconW, iconH, 96, 96, bitmap.Format, null, iconData, iconStride);
+            this.mnuItemColor10.Icon = new Image() { Source = icon };
+            this.mnuItemColor16.Icon = new Image() { Source = icon };
         }
 
         private void mnuItemColor_Click(object sender, RoutedEventArgs e)
         {
             MenuItem item = (MenuItem)sender;
             Clipboard.SetText(item.Header.ToString());
+        } 
+        #endregion
+
+        #region Click Though Window
+
+        private void Lock_Button_Click(object sender, RoutedEventArgs e)
+        {
+            DoLock();
+
         }
-    
+        private void Through_Button_Click(object sender, RoutedEventArgs e)
+        {
+            this.mnuItemThrough.IsChecked = !this.mnuItemThrough.IsChecked;
+
+        }
+
+        private void DoLock()
+        {
+            this.Lock = !this.Lock;
+            this.Topmost = this.Lock;
+            this.mnuItemLock.Header = this.Lock ? "Unlock" : "Lock";
+            if (this.mnuItemThrough.IsChecked)
+            {
+                if (this.Lock)
+                {
+
+                    SetWindowLong(hwnd, GWL_EXSTYLE, oldStyle | WS_EX_TRANSPARENT);
+                    this.LockTip.Visibility = System.Windows.Visibility.Visible;
+                }
+                else
+                {
+                    SetWindowLong(hwnd, GWL_EXSTYLE, oldStyle);
+                    this.LockTip.Visibility = System.Windows.Visibility.Hidden;
+                }
+            }
+        }
+
+
+        const int WS_EX_TRANSPARENT = 0x00000020;
+        const int GWL_EXSTYLE = -20;
+
+        [DllImport("user32.dll")]
+        static extern int SetWindowLong(IntPtr hwnd, int index, int newStyle);
+        [DllImport("user32.dll")]
+        static extern int GetWindowLong(IntPtr hwnd, int index);
+
+        int oldStyle;
+        IntPtr hwnd;
+
+        void MainWindow_SourceInitialized(object sender, EventArgs e)
+        {
+            //为了能够穿透窗体
+            oldStyle = GetWindowLong(hwnd, GWL_EXSTYLE);
+            hwnd = new WindowInteropHelper(this).Handle;
+        }
+
+        private void CommandBinding_UndoExecuted(object sender, ExecutedRoutedEventArgs e)
+        {
+            if (this.Lock)
+            {
+                DoLock();
+            }
+        }
+
+
+
+        #endregion
+        
+        public bool Lock { get; set; }
     }
 }
